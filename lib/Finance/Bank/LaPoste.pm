@@ -267,7 +267,7 @@ sub statements {
 	    # (since 24/06/2004), we need to drop some lines and some fields
 	    @$l = map {
 		my (undef, $date, $description, undef, $amount) = @$_;
-		$date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
+		$date && $date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
 	    } @$l;
 	}
 
