@@ -6,8 +6,9 @@ use Carp qw(carp croak);
 use HTTP::Cookies;
 use LWP::UserAgent;
 use HTML::Parser;
+use HTML::Form;
 
-our $VERSION = '1.03';
+our $VERSION = '2.00';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -93,6 +94,7 @@ my $parse_table = sub {
 
 my $normalize_number = sub {
     my ($s) = @_;
+    $s =~ s/\xC2?\xA0//; # non breakable space, both in UTF8 and latin1
     $s =~ s/ //;
     $s =~ s/,/./;
     $s + 0; # turn into a number
@@ -110,45 +112,43 @@ feedback (useful for verbose mode or debugging) (argument named "feedback")
 
 =cut
 
-my $url1 = 'https://www.videoposte.com/videoposte/frame/f_contenu/index.html';
-my $base_url = 'https://www.videoposte.com/videoposte/releve';
-
-sub _get_cookie {
-    my ($self) = @_;
-    $self->{feedback}->("get cookie") if $self->{feedback};
-    my $cookie_jar = HTTP::Cookies->new;
-    my $response = $self->{ua}->simple_request(HTTP::Request->new(GET => $url1));
-    $cookie_jar->extract_cookies($response);
-    $self->{ua}->cookie_jar($cookie_jar);
-}
+my $base_url = 'https://ws.videoposte.com/BADWeb/canalXHTML';
+my $identif_url = "$base_url/identif.ea";
 
 sub _login {
     my ($self) = @_;
     $self->{feedback}->("login") if $self->{feedback};
-    my $request = HTTP::Request->new(POST => $url1);
-    $request->content_type('application/x-www-form-urlencoded');
-    $request->content("ID=$self->{username}" . '&' . "PWD=$self->{password}");
-    my $response = $self->{ua}->request($request);
+
+    my $cookie_jar = HTTP::Cookies->new;
+    my $response = $self->{ua}->simple_request(HTTP::Request->new(GET => $identif_url));
+    $cookie_jar->extract_cookies($response);
+    $self->{ua}->cookie_jar($cookie_jar);
+
+    my $form = HTML::Form->parse($response->content, $identif_url);
+    $form->value(username => $self->{username});
+    $form->value(password => $self->{password});
+
+    push @{$self->{ua}->requests_redirectable}, 'POST';
+    $response = $self->{ua}->request($form->click);
     $response->is_success or die "login failed\n" . $response->error_as_HTML;
 }
 
 sub _list_accounts {
     my ($self) = @_;
     $self->{feedback}->("list accounts") if $self->{feedback};
-    my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/liste_comptes.html"));
+    my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/syntheseAssurancesEtComptes.ea"));
     $response->is_success or die "can't access account\n" . $response->error_as_HTML;
 
     my $accounts = $parse_table->($response->content);
     map {
 	my ($account, $account_no, $balance) = grep { $_ ne '' } @$_;
-	if (ref $account) {
-	    $account->[0] =~ s/^- //;
-	    $account->[1] =~ s/OPE=16/OPE=32/;
+	if (ref $account && $account_no) {
+	    $account->[1] =~ s/typeRecherche=1$/typeRecherche=10/; # 400 last operations
 	    {
 	        name => $account->[0],
 	        account_no => $account_no, 
 	        balance => $normalize_number->($balance),
-	        $account->[1] =~ /releve_(ccp|cne|cb)\.html/ ? (url => $account->[1]) : (), 
+	        $account->[1] =~ /releve_(ccp|cne|cb)\.ea/ ? (url => $account->[1]) : (), 
 	    };
 	} else { () }
     } @$accounts;
@@ -163,20 +163,12 @@ sub new {
 
     $self->{ua} ||= LWP::UserAgent->new;
 
-    _get_cookie($self);
     _login($self);
     $self;
 }
 
 sub default_account {
-    my ($self, $nb_ope, $account_type) = @_;
-    $nb_ope ||= 64;
-    $account_type ||= 'ccp';
-    my $cpt = $self->{username} =~ /(...)(.*)/ && uc("$2$1");;
-    Finance::Bank::LaPoste::Account->new($self, 
-					 name => 'COMPTE COURANT POSTAL', 
-					 account_no => $cpt, 
-					 url => "releve_$account_type.html?NumCpt=$cpt&UNT=1&OPE=$nb_ope");
+    die "default_account can't be used anymore";
 }
 
 =pod
@@ -246,7 +238,7 @@ sub statements {
     $self->{url} or return;
     $self->{statements} ||= do {
 	$self->{feedback}->("get statements") if $self->{feedback};
-	my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/$self->{url}"));
+	my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/$self->{url}"));
 	$response->is_success or die "can't access account $self->{name} statements\n" . $response->error_as_HTML;
 
 	my $html = $response->content;
@@ -336,7 +328,7 @@ sub as_string {
 
 =head1 COPYRIGHT
 
-Copyright 2002-2003, Pascal 'Pixel' Rigaux. All Rights Reserved. This module
+Copyright 2002-2006, Pascal 'Pixel' Rigaux. All Rights Reserved. This module
 can be redistributed under the same terms as Perl itself.
 
 =head1 AUTHOR
