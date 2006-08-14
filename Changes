@@ -1,3 +1,9 @@
+2.00 Mon Aug 14 19:21:08 CEST 2006
+     - adapt to www.videoposte.com architecture
+     - drop default_account() since you must _list_accounts to obtain anything
+       (fortunately it was not documented and hopefully unused)
+     - be warning free when running with -w (thanks to Jean-Marie Renouard for reporting this)
+
 1.03 Tue Sep 20 12:41:59 CEST 2005
      - handle delayed-debit credit card pseudo account
      - allow choosing the number of operations in default_account()
