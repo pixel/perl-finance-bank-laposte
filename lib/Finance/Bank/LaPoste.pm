@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTML::Parser;
 use HTML::Form;
 
-our $VERSION = '2.00';
+our $VERSION = '3.00';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -138,6 +138,11 @@ sub _list_accounts {
     $self->{feedback}->("list accounts") if $self->{feedback};
     my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/syntheseAssurancesEtComptes.ea"));
     $response->is_success or die "can't access account\n" . $response->error_as_HTML;
+
+    if ($response->content =~ /frame src="liste_comptes.jsp"/) {
+	$response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/liste_comptes.jsp"));
+	$response->is_success or die "can't access account\n" . $response->error_as_HTML;
+    }
 
     my $accounts = $parse_table->($response->content);
     map {
@@ -328,7 +333,7 @@ sub as_string {
 
 =head1 COPYRIGHT
 
-Copyright 2002-2006, Pascal 'Pixel' Rigaux. All Rights Reserved. This module
+Copyright 2002-2007, Pascal 'Pixel' Rigaux. All Rights Reserved. This module
 can be redistributed under the same terms as Perl itself.
 
 =head1 AUTHOR
