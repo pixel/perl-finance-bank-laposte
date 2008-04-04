@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTML::Parser;
 use HTML::Form;
 
-our $VERSION = '3.00';
+our $VERSION = '4.00';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -112,19 +112,22 @@ feedback (useful for verbose mode or debugging) (argument named "feedback")
 
 =cut
 
-my $base_url = 'https://ws.videoposte.com/BADWeb/canalXHTML';
-my $identif_url = "$base_url/identif.ea";
+my $first_url = 'https://www.particuliers.labanquepostale.fr/index/comptes/clavier_statique.html';
+my $base_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML';
 
 sub _login {
     my ($self) = @_;
     $self->{feedback}->("login") if $self->{feedback};
 
     my $cookie_jar = HTTP::Cookies->new;
-    my $response = $self->{ua}->simple_request(HTTP::Request->new(GET => $identif_url));
+    my $response = $self->{ua}->simple_request(HTTP::Request->new(GET => $first_url));
     $cookie_jar->extract_cookies($response);
     $self->{ua}->cookie_jar($cookie_jar);
 
-    my $form = HTML::Form->parse($response->content, $identif_url);
+    my ($clavier_url) = $response->content =~ /src="(.*?identif\.ea.*?)"/ or die "bad response from first url\n";
+
+    $response = $self->{ua}->request(HTTP::Request->new(GET => $clavier_url));
+    my $form = HTML::Form->parse($response->content, $clavier_url);
     $form->value(username => $self->{username});
     $form->value(password => $self->{password});
 
