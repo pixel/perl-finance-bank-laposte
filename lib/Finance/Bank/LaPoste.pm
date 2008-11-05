@@ -112,7 +112,7 @@ feedback (useful for verbose mode or debugging) (argument named "feedback")
 
 =cut
 
-my $first_url = 'https://www.particuliers.labanquepostale.fr/index/comptes/clavier_statique.html';
+my $first_url = 'https://www.labanquepostale.fr/index/particuliers/banque_en_ligne/clavier_statique.html';
 my $base_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML';
 
 sub _login {
@@ -142,7 +142,7 @@ sub _list_accounts {
     my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/syntheseAssurancesEtComptes.ea"));
     $response->is_success or die "can't access account\n" . $response->error_as_HTML;
 
-    if ($response->content =~ /frame src="liste_comptes.jsp"/) {
+    if ($response->content =~ /frame src=".*liste_comptes.jsp"/) {
 	$response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/liste_comptes.jsp"));
 	$response->is_success or die "can't access account\n" . $response->error_as_HTML;
     }
@@ -256,20 +256,16 @@ sub statements {
 
 	$self->{balance} ||= do {
 	    my ($balance) = $html =~ /Solde\s+au.*?:\s+(.*?)\s+euros/s;
-	    $balance =~ s/<.*>\s*//; # (since 24/06/2004) remove: </span><span class="soldeur">
+	    $balance =~ s/<.*?>\s*//g; # (since 24/06/2004) remove: </span><span class="soldeur"> or <strong>...</strong>
 	    $normalize_number->($balance);
 	};
 	my $l = $parse_table->($html);
-	if ($l->[0][0] eq 'date') { # old version
+
 	    # drop first line which contain columns title
-	    shift @$l
-	} else {
-	    # (since 24/06/2004), we need to drop some lines and some fields
 	    @$l = map {
-		my (undef, $date, $description, undef, $amount) = @$_;
+		my ($date, $description, $amount) = @$_;
 		$date && $date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
 	    } @$l;
-	}
 
 	my $prev_month = $solde_month eq 'janvier' || $solde_month eq '01' ? 1 : 12;
 	[ map {
