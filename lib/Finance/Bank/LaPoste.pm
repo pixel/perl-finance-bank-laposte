@@ -156,7 +156,7 @@ sub _list_accounts {
 	        name => $account->[0],
 	        account_no => $account_no, 
 	        balance => $normalize_number->($balance),
-	        $account->[1] =~ /releve_(ccp|cne|cb)\.ea/ ? (url => $account->[1]) : (), 
+	        $account->[1] =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => $account->[1]) : (), 
 	    };
 	} else { () }
     } @$accounts;
@@ -245,17 +245,27 @@ sub statements {
     my ($self) = @_;
     $self->{url} or return;
     $self->{statements} ||= do {
+    my $retry;
+      retry:
 	$self->{feedback}->("get statements") if $self->{feedback};
 	my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/$self->{url}"));
 	$response->is_success or die "can't access account $self->{name} statements\n" . $response->error_as_HTML;
 
 	my $html = $response->content;
+
+	if ($html =~ /D&eacute;tail de vos cartes/ && !$retry) {
+	    my @l = $html =~ /a href="(3-mouvementsCarteDD.ea.*?)"/g;
+	    $self->{url} = $l[-1]; # taking last (??)
+	    $retry++;
+	    goto retry;
+	}
+
 	my ($solde_month, $year) = 
 	  $html =~ /Solde\s+au\s+\d+\s+(\S+)\s+(20\d\d)/ ? ($1, $2) :
 	  $html =~ m!au \d\d/(\d\d)/(20\d\d)!;
 
 	$self->{balance} ||= do {
-	    my ($balance) = $html =~ /Solde\s+au.*?:\s+(.*?)\s+euros/s;
+	    my ($balance) = $html =~ /(?:Solde|Encours\s+pr&eacute;lev&eacute;)\s+au.*?:\s+(.*?)\beuros/s;
 	    $balance =~ s/<.*?>\s*//g; # (since 24/06/2004) remove: </span><span class="soldeur"> or <strong>...</strong>
 	    $normalize_number->($balance);
 	};
