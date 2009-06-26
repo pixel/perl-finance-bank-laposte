@@ -142,7 +142,7 @@ sub _list_accounts {
     my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/syntheseAssurancesEtComptes.ea"));
     $response->is_success or die "can't access account\n" . $response->error_as_HTML;
 
-    if ($response->content =~ /frame src=".*liste_comptes.jsp"/) {
+    if ($response->content =~ /frame src=".*liste_comptes.jsp"|<a href=".*aiguillagePersonnalisation.ea"/) {
 	$response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/liste_comptes.jsp"));
 	$response->is_success or die "can't access account\n" . $response->error_as_HTML;
     }
