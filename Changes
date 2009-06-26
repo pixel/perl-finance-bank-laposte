@@ -1,3 +1,7 @@
+6.00 Fri Jun 26 19:16:37 CEST 2009
+     - adapt to new labanquepostale.fr architecture
+       (including "cartes à débit différé")
+
 5.00 Wed Nov  5 09:30:54 CET 2008
      - adapt to new labanquepostale.fr architecture (rt.cpan.org#40635)
 
