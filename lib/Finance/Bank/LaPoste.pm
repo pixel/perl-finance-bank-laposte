@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTML::Parser;
 use HTML::Form;
 
-our $VERSION = '5.00';
+our $VERSION = '6.00';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
