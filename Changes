@@ -2,6 +2,7 @@
        (`clavier_statique.html' is no more available.
         relying on md5sums of button images to recognize them 
 	to be able to compute the mangled password)
+       (drop `relevesCCP-X' intermediate link)
 
 6.00 Fri Jun 26 19:16:37 CEST 2009
      - adapt to new labanquepostale.fr architecture

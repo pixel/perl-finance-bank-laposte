@@ -206,12 +206,14 @@ sub _list_accounts {
     map {
 	my ($account, $account_no, $balance) = grep { $_ ne '' } @$_;
 	if (ref $account && $account_no) {
-	    $account->[1] =~ s/typeRecherche=1$/typeRecherche=10/; # 400 last operations
+	    my $url = $account->[1];
+	    $url =~ s/typeRecherche=1$/typeRecherche=10/; # 400 last operations
+	    $url =~ s!/relevesCCP/\d-!/relevesCCP/!; # remove the unneeded number (otherwise one get an intermediate page)
 	    {
 	        name => $account->[0],
 	        account_no => $account_no, 
 	        balance => $normalize_number->($balance),
-	        $account->[1] =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => $account->[1]) : (), 
+		$url =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => $url) : (), 
 	    };
 	} else { () }
     } @$accounts;
