@@ -312,7 +312,7 @@ sub statements {
 
 	if ($html =~ /D&eacute;tail de vos cartes/ && !$retry) {
 	    my @l = $html =~ /a href="(3-mouvementsCarteDD.ea.*?)"/g;
-	    $self->{url} = $l[-1]; # taking last (??)
+	    $self->{url} = "../relevesCB/" . $l[-1]; # taking last (??)
 	    $retry++;
 	    goto retry;
 	}

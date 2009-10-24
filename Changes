@@ -3,6 +3,7 @@
         relying on md5sums of button images to recognize them 
 	to be able to compute the mangled password)
        (drop `relevesCCP-X' intermediate link)
+       (fix accessing "cartes à débit différé")
 
 6.00 Fri Jun 26 19:16:37 CEST 2009
      - adapt to new labanquepostale.fr architecture
