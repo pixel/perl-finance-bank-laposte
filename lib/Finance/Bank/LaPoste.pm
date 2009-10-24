@@ -7,6 +7,7 @@ use HTTP::Cookies;
 use LWP::UserAgent;
 use HTML::Parser;
 use HTML::Form;
+use Digest::MD5();
 
 our $VERSION = '6.00';
 
@@ -112,7 +113,7 @@ feedback (useful for verbose mode or debugging) (argument named "feedback")
 
 =cut
 
-my $first_url = 'https://www.labanquepostale.fr/index/particuliers/banque_en_ligne/clavier_statique.html';
+my $first_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML/identif.ea?origin=particuliers';
 my $base_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML';
 
 sub _login {
@@ -120,20 +121,74 @@ sub _login {
     $self->{feedback}->("login") if $self->{feedback};
 
     my $cookie_jar = HTTP::Cookies->new;
-    my $response = $self->{ua}->simple_request(HTTP::Request->new(GET => $first_url));
+    my $response = $self->{ua}->request(HTTP::Request->new(GET => $first_url));
     $cookie_jar->extract_cookies($response);
     $self->{ua}->cookie_jar($cookie_jar);
 
-    my ($clavier_url) = $response->content =~ /src="(.*?identif\.ea.*?)"/ or die "bad response from first url\n";
+    my %mangling_map = _get_number_mangling_map($self);
+    my $password = join('', map { $mangling_map{$_} } split('', $self->{password}));
 
-    $response = $self->{ua}->request(HTTP::Request->new(GET => $clavier_url));
-    my $form = HTML::Form->parse($response->content, $clavier_url);
+    my $form = HTML::Form->parse($response->content, $first_url);
     $form->value(username => $self->{username});
-    $form->value(password => $self->{password});
+    $form->value(password => $password);
 
     push @{$self->{ua}->requests_redirectable}, 'POST';
     $response = $self->{ua}->request($form->click);
     $response->is_success or die "login failed\n" . $response->error_as_HTML;
+}
+
+sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed: $!\n"; print $F $_ foreach @_; 1 }
+
+# to update %img_md5sum_to_number, set $debug_imgs to 1, 
+# then rename /tmp/[a-j].gif into /tmp/[0-9].gif according to the image
+# then do "md5sum /tmp/[0-9].gif"
+my $debug_imgs = 0;
+my %img_md5sum_to_number = (
+    'a02574d7bf67677d2a86b7bfc5e864fe' => 0,
+    'eb85e1cc45dd6bdb3cab65c002d7ac8a' => 1,
+    '596e6fbd54d5b111fe5df8a4948e80a4' => 2,
+    '9cdc989a4310554e7f5484d0d27a86ce' => 3,
+    '0183943de6c0e331f3b9fc49c704ac6d' => 4,
+    '291b9987225193ab1347301b241e2187' => 5,
+    '163279f1a46082408613d12394e4042a' => 6,
+    'b0a9c740c4cada01eb691b4acda4daea' => 7,
+    '3c4307ee92a1f3b571a3c542eafcb330' => 8,
+    'c5b854ae314b61ba42948909e0b2eae7' => 9,
+);
+
+sub _get_number_mangling_map {
+    my ($self) = @_;
+
+    my $i = 0;
+    map { 
+	my $md5sum = Digest::MD5::md5_hex($_);
+	my $number = $img_md5sum_to_number{$md5sum};
+	defined $number or die "unknown md5sum $md5sum, please update \%img_md5sum_to_number\n";
+	$number => $i++;
+    } _get_imgs($self);
+}
+
+sub _get_imgs {
+    my ($self) = @_;
+
+    my @imgs = map {
+	my $url = 'https://voscomptesenligne.labanquepostale.fr/wsost/OstBrokerWeb/loginform?imgid=' . $_ . '&' . rand();
+	_GET_content($self, $url);
+    } 0 .. 9;
+
+    if ($debug_imgs) {
+	my $i = 'a';
+	_output("/tmp/" . $i++ . ".gif", $_) foreach @imgs;
+    }
+    @imgs;
+}
+
+sub _GET_content {
+    my ($self, $url) = @_;
+
+    my $req = $self->{ua}->request(HTTP::Request->new(GET => $url));
+    $req->is_success or die "getting $url failed\n" . $req->error_as_HTML;
+    $req->content;
 }
 
 sub _list_accounts {
