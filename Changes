@@ -1,3 +1,7 @@
+7.01 Thu Nov  5 22:41:38 CET 2009
+
+     - fix requires (rt.cpan.org#50854)
+
 7.00 Sat Oct 24 19:12:09 CEST 2009
 
      - adapt to new labanquepostale.fr architecture
