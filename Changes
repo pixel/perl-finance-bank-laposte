@@ -1,3 +1,9 @@
+7.02 Wed Nov 18 21:39:57 CET 2009
+
+     - some more adaptation to new labanquepostale.fr architecture:
+       drop `relevesEpargnes-X' intermediate link (thanks to gmondon)
+     - handle "affichage tout en euros" mode (thanks to gmondon)
+
 7.01 Thu Nov  5 22:41:38 CET 2009
 
      - fix requires (rt.cpan.org#50854)

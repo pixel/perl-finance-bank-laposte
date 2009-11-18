@@ -9,7 +9,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.01';
+our $VERSION = '7.02';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -208,7 +208,7 @@ sub _list_accounts {
 	if (ref $account && $account_no) {
 	    my $url = $account->[1];
 	    $url =~ s/typeRecherche=1$/typeRecherche=10/; # 400 last operations
-	    $url =~ s!/relevesCCP/\d-!/relevesCCP/!; # remove the unneeded number (otherwise one get an intermediate page)
+	    $url =~ s!/(relevesCCP|relevesEpargnes)/\d-!/$1/!; # remove the unneeded number (otherwise one get an intermediate page)
 	    {
 	        name => $account->[0],
 	        account_no => $account_no, 
@@ -326,11 +326,12 @@ sub statements {
 	    $balance =~ s/<.*?>\s*//g; # (since 24/06/2004) remove: </span><span class="soldeur"> or <strong>...</strong>
 	    $normalize_number->($balance);
 	};
+	my $fourth_column_is_Francs = $html =~ m!>Francs.*</th>!;
 	my $l = $parse_table->($html);
 
-	    # drop first line which contain columns title
 	    @$l = map {
-		my ($date, $description, $amount) = @$_;
+		my ($date, $description, $amount_neg, $amount_pos) = @$_;
+		my $amount = $normalize_number->($amount_neg) + ($fourth_column_is_Francs ? 0 : $normalize_number->($amount_pos));
 		$date && $date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
 	    } @$l;
 
@@ -340,7 +341,7 @@ sub statements {
 	    my ($day, $month) = $date =~ m|(\d+)/(\d+)|;
 	    $year-- if $month > $prev_month;
 	    $prev_month = $month;
-	    Finance::Bank::LaPoste::Statement->new(day => $day, month => $month, year => $year, description => $description, amount => $normalize_number->($amount));
+	    Finance::Bank::LaPoste::Statement->new(day => $day, month => $month, year => $year, description => $description, amount => $amount);
 	} @$l ];
     };
     @{$self->{statements}};
