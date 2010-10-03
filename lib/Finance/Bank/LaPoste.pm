@@ -9,7 +9,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.02';
+our $VERSION = '7.03';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -153,7 +153,7 @@ my %img_md5sum_to_number = (
     '163279f1a46082408613d12394e4042a' => 6,
     'b0a9c740c4cada01eb691b4acda4daea' => 7,
     '3c4307ee92a1f3b571a3c542eafcb330' => 8,
-    'c5b854ae314b61ba42948909e0b2eae7' => 9,
+    'dbccecfa2206bfdb4ca891476404cc68' => 9,
 );
 
 sub _get_number_mangling_map {
