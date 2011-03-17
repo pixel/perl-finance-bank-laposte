@@ -1,3 +1,7 @@
+7.03.1 Thu Mar 17 10:01:15 CET 2011
+
+     - add more requires to ensure cpantesters work
+
 7.03 Sun Oct  3 14:41:58 CEST 2010
 
      - adapt to labanquepostale.fr change: md5sum of button "9" changed
