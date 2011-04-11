@@ -1,4 +1,8 @@
-7.03.1 Thu Mar 17 10:01:15 CET 2011
+7.05 Sun Apr 10 12:27:28 CEST 2011
+
+     - adapt to labanquepostale.fr changes (mostly login) 
+
+7.04 Thu Mar 17 10:01:15 CET 2011
 
      - add more requires to ensure cpantesters work
 

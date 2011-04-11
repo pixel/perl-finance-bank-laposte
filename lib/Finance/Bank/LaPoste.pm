@@ -9,7 +9,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.03.1';
+our $VERSION = '7.05';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -76,7 +76,8 @@ my $parse_table = sub {
 	    push @l, $row if $row;
 	    undef $row;
         } elsif ($tag eq '/td' && defined $td) {
-	    $td =~ s/(|&nbsp;|\s)+/ /g;
+	    $td =~ s/(
+|&nbsp;|\s)+/ /g;
 	    $td =~ s/^\s*//;
 	    $td =~ s/\s*$//;
 	    push @$row, $href ? [ $td, $href ] : $td;
@@ -114,7 +115,6 @@ feedback (useful for verbose mode or debugging) (argument named "feedback")
 =cut
 
 my $first_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML/identif.ea?origin=particuliers';
-my $base_url = 'https://voscomptesenligne.labanquepostale.fr/voscomptes/canalXHTML';
 
 sub _login {
     my ($self) = @_;
@@ -135,8 +135,28 @@ sub _login {
     push @{$self->{ua}->requests_redirectable}, 'POST';
     $response = $self->{ua}->request($form->click);
     $response->is_success or die "login failed\n" . $response->error_as_HTML;
+
+    $self->{feedback}->("list accounts") if $self->{feedback};
+
+    $response = _handle_javascript_redirects($self, $response);
+
+    $self->{accounts} = [ _list_accounts($self, $response) ];
 }
 
+sub _handle_javascript_redirects {
+    my ($self, $response) =@_;
+
+    while ($response->content =~ /top.location.replace\(["'](.*)["']\)/) {	
+	$response = $self->{ua}->request(HTTP::Request->new(GET => _rel_url($response, $1)));
+	$response->is_success or die "login failed\n" . $response->error_as_HTML;
+    }
+    $response;
+}
+
+sub _rel_url {
+    my ($response, $rel) = @_;
+    $response->base . "/../$rel";
+}
 sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed: $!\n"; print $F $_ foreach @_; 1 }
 
 # to update %img_md5sum_to_number, set $debug_imgs to 1, 
@@ -192,15 +212,7 @@ sub _GET_content {
 }
 
 sub _list_accounts {
-    my ($self) = @_;
-    $self->{feedback}->("list accounts") if $self->{feedback};
-    my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/syntheseAssurancesEtComptes.ea"));
-    $response->is_success or die "can't access account\n" . $response->error_as_HTML;
-
-    if ($response->content =~ /frame src=".*liste_comptes.jsp"|<a href=".*aiguillagePersonnalisation.ea"/) {
-	$response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/liste_comptes.jsp"));
-	$response->is_success or die "can't access account\n" . $response->error_as_HTML;
-    }
+    my ($self, $response) = @_;
 
     my $accounts = $parse_table->($response->content);
     map {
@@ -208,12 +220,11 @@ sub _list_accounts {
 	if (ref $account && $account_no) {
 	    my $url = $account->[1];
 	    $url =~ s/typeRecherche=1$/typeRecherche=10/; # 400 last operations
-	    $url =~ s!/(relevesCCP|relevesEpargnes)/\d-!/$1/!; # remove the unneeded number (otherwise one get an intermediate page)
 	    {
 	        name => $account->[0],
 	        account_no => $account_no, 
 	        balance => $normalize_number->($balance),
-		$url =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => $url) : (), 
+		$url =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => _rel_url($response, $url)) : (), 
 	    };
 	} else { () }
     } @$accounts;
@@ -247,8 +258,6 @@ your bank accounts.
 
 sub check_balance {
     my $self = &new;
-
-    $self->{accounts} = [ _list_accounts($self) ];
 
     map { Finance::Bank::LaPoste::Account->new($self, %$_) } @{$self->{accounts}};
 }
@@ -305,7 +314,7 @@ sub statements {
     my $retry;
       retry:
 	$self->{feedback}->("get statements") if $self->{feedback};
-	my $response = $self->{ua}->request(HTTP::Request->new(GET => "$base_url/releve/$self->{url}"));
+	my $response = $self->{ua}->request(HTTP::Request->new(GET => $self->{url}));
 	$response->is_success or die "can't access account $self->{name} statements\n" . $response->error_as_HTML;
 
 	my $html = $response->content;
