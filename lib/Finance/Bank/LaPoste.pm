@@ -3,6 +3,7 @@ package Finance::Bank::LaPoste;
 use strict;
 
 use Carp qw(carp croak);
+use Graphics::Magick;
 use HTTP::Cookies;
 use LWP::UserAgent;
 use HTML::Parser;
@@ -125,7 +126,7 @@ sub _login {
     $cookie_jar->extract_cookies($response);
     $self->{ua}->cookie_jar($cookie_jar);
 
-    my %mangling_map = _get_number_mangling_map($self);
+    my %mangling_map = _get_number_mangling_map($self, _get_img_map_data($self, $response));
     my $password = join('', map { $mangling_map{$_} } split('', $self->{password}));
 
     my $form = HTML::Form->parse($response->content, $first_url);
@@ -156,53 +157,74 @@ sub _handle_javascript_redirects {
 sub _rel_url {
     my ($response, $rel) = @_;
     my $base = $response->base;
-    $base =~ s/\?.*//;
-    "$base/../$rel";
+    if ($rel =~ m!^/!) {
+	$base =~ m!([^/]*//[^/]*)! && "$1$rel";
+    } else {
+	$base =~ s/\?.*//;
+	"$base/../$rel";
+    }
 }
+
 sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed: $!\n"; print $F $_ foreach @_; 1 }
 
 # to update %img_md5sum_to_number, set $debug_imgs to 1, 
-# then rename /tmp/[a-j].gif into /tmp/[0-9].gif according to the image
-# then do "md5sum /tmp/[0-9].gif"
+# then rename /tmp/img*.xpm into /tmp/[0-9].xpm according to the image
+# then do "md5sum /tmp/[0-9].xpm"
 my $debug_imgs = 0;
 my %img_md5sum_to_number = (
-    'a02574d7bf67677d2a86b7bfc5e864fe' => 0,
-    'eb85e1cc45dd6bdb3cab65c002d7ac8a' => 1,
-    '596e6fbd54d5b111fe5df8a4948e80a4' => 2,
-    '9cdc989a4310554e7f5484d0d27a86ce' => 3,
-    '0183943de6c0e331f3b9fc49c704ac6d' => 4,
-    '291b9987225193ab1347301b241e2187' => 5,
-    '163279f1a46082408613d12394e4042a' => 6,
-    'b0a9c740c4cada01eb691b4acda4daea' => 7,
-    '3c4307ee92a1f3b571a3c542eafcb330' => 8,
-    'dbccecfa2206bfdb4ca891476404cc68' => 9,
+    '84f5535a2e1ef94722f0d4d267001a4c' => 0,
+    '1901e00c4112ead080e25be80a40560a' => 1,
+    '2d81c28245a870b7f7ea23ee0ae28690' => 2,
+    '15d19ffb5371a993b63c4d45aec62db2' => 3,
+    '0c7a580dde3c903016189d3775c4bb66' => 4,
+    '06ecc5514cc4f2be0087a470c32cc42f' => 5,
+    '803082fca45969087e609a94badeaf2e' => 6,
+    '43c94ce045f1f8557d00112e6781c6fa' => 7,
+    'e258b87437aae91be8ed209b4ba9bcc0' => 8,
+    '6bfbb7490ef3698b7adee291b63d3e9e' => 9,
+    '6110983d937627e8b2c131335c9c73e8' => 'blank',
 );
 
 sub _get_number_mangling_map {
-    my ($self) = @_;
+    my ($self, $img_map_data) = @_;
+
+    my $img_map=Graphics::Magick->new;
+    $img_map->BlobToImage($img_map_data);
+    $img_map->Threshold(threshold => '90%');
+
+    my $size = 35;
+    my $border = 2;
 
     my $i = 0;
-    map { 
-	my $md5sum = Digest::MD5::md5_hex($_);
-	my $number = $img_md5sum_to_number{$md5sum};
-	defined $number or die "unknown md5sum $md5sum, please update \%img_md5sum_to_number\n";
-	$number => $i++;
-    } _get_imgs($self);
+    my %map;
+    for my $y (0 .. 3) {
+	for my $x (0 .. 3) {
+
+	    my $newimage = $img_map->Clone;
+	    $newimage->Crop(geometry => 
+			      sprintf("%dx%d+%d+%d",
+				      12, 17,
+				      12+ $x * ($size + 2),
+				      8 + $y * ($size + 2)));
+	    $newimage->Set(magick => 'xpm');
+	    my ($img) = $newimage->ImageToBlob;
+	    if ($debug_imgs) {
+		_output("/tmp/img$x$y.xpm", $img);
+	    }
+	    my $md5sum = Digest::MD5::md5_hex($img);
+	    my $number = $img_md5sum_to_number{$md5sum};
+	    defined($number) or die "missing md5sum, please update \%img_md5sum_to_number (setting \$debug_imgs will help)\n";
+	    $map{$number} = sprintf("%02d", $i);
+	    $i++;
+	}
+    }
+    %map;
 }
 
-sub _get_imgs {
-    my ($self) = @_;
-
-    my @imgs = map {
-	my $url = 'https://voscomptesenligne.labanquepostale.fr/wsost/OstBrokerWeb/loginform?imgid=' . $_ . '&' . rand();
-	_GET_content($self, $url);
-    } 0 .. 9;
-
-    if ($debug_imgs) {
-	my $i = 'a';
-	_output("/tmp/" . $i++ . ".gif", $_) foreach @imgs;
-    }
-    @imgs;
+sub _get_img_map_data {
+    my ($self, $response) = @_;
+    my ($url) = $response->content =~ /<img id="clavierImg".*?src="(.*?)"/;
+    _GET_content($self, _rel_url($response, $url));
 }
 
 sub _GET_content {
