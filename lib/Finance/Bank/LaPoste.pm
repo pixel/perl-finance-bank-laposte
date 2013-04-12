@@ -9,7 +9,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.05';
+our $VERSION = '7.06';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -155,7 +155,9 @@ sub _handle_javascript_redirects {
 
 sub _rel_url {
     my ($response, $rel) = @_;
-    $response->base . "/../$rel";
+    my $base = $response->base;
+    $base =~ s/\?.*//;
+    "$base/../$rel";
 }
 sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed: $!\n"; print $F $_ foreach @_; 1 }
 
@@ -319,9 +321,9 @@ sub statements {
 
 	my $html = $response->content;
 
-	if ($html =~ /D&eacute;tail de vos cartes/ && !$retry) {
-	    my @l = $html =~ /a href="(3-mouvementsCarteDD.ea.*?)"/g;
-	    $self->{url} = "../relevesCB/" . $l[-1]; # taking last (??)
+	if ($html =~ /D..?tail de vos cartes/ && !$retry) {
+	    my @l = $html =~ /a href="(.*preparerRecherche-mouvementsCarteDD.ea.*?)"/g;
+	    $self->{url} = _rel_url($response, $l[0]); # taking first (??)
 	    $retry++;
 	    goto retry;
 	}
@@ -355,6 +357,9 @@ sub statements {
     };
     @{$self->{statements}};
 }
+
+sub _rel_url { &Finance::Bank::LaPoste::_rel_url }
+
 
 package Finance::Bank::LaPoste::Statement;
 
