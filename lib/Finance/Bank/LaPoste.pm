@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.06';
+our $VERSION = '7.07';
 
 # $Id: $
 # $Log: LaPoste.pm,v $

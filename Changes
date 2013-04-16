@@ -1,3 +1,10 @@
+7.07 Tue Apr 16 21:39:02 CEST 2013
+
+     - adapt to labanquepostale.fr changes:
+       password mangling for login need need cropping/thresolding
+       a 4x4 image containing 0-9 digits
+     - new requirement: Graphics::Magick
+
 7.06 Wed Aug 31 21:41:54 CEST 2011
 
      - adapt to labanquepostale.fr changes (credit cards) 
