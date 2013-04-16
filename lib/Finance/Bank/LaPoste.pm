@@ -97,6 +97,7 @@ my $parse_table = sub {
 
 my $normalize_number = sub {
     my ($s) = @_;
+    defined($s) or return 0;
     $s =~ s/\xC2?\xA0//; # non breakable space, both in UTF8 and latin1
     $s =~ s/ //;
     $s =~ s/,/./;
