@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.07';
+our $VERSION = '7.08';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -173,16 +173,16 @@ sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed
 # then do "md5sum /tmp/[0-9].xpm"
 my $debug_imgs = 0;
 my %img_md5sum_to_number = (
-    '84f5535a2e1ef94722f0d4d267001a4c' => 0,
-    '1901e00c4112ead080e25be80a40560a' => 1,
-    '2d81c28245a870b7f7ea23ee0ae28690' => 2,
-    '15d19ffb5371a993b63c4d45aec62db2' => 3,
-    '0c7a580dde3c903016189d3775c4bb66' => 4,
-    '06ecc5514cc4f2be0087a470c32cc42f' => 5,
-    '803082fca45969087e609a94badeaf2e' => 6,
-    '43c94ce045f1f8557d00112e6781c6fa' => 7,
-    'e258b87437aae91be8ed209b4ba9bcc0' => 8,
-    '6bfbb7490ef3698b7adee291b63d3e9e' => 9,
+    '5b378a02cddac725f8db1104da31a457' => 0,
+    '264fc8643f2277ce7df738d8bf0d4533' => 1,
+    'd606ebeeff2ee2532aa7d89f97f203e2' => 2,
+    '71a5e8344d0343928ff077cf292fc7e3' => 3,
+    '50a363a8d16f6fbba5e8b14432e2d73e' => 4,
+    'd8ce75d8bd5c64a2ed10deede9ad7bc9' => 5,
+    '03c32205bcc9fa135b2a3d105dbb2644' => 6,
+    'ab159c63f95caa870429812c0cd09ea5' => 7,
+    '16454f3fb921be822f379682d0727f3f' => 8,
+    '17273d3d0aacf3b9a7052d4ad3eba74d' => 9,
     '6110983d937627e8b2c131335c9c73e8' => 'blank',
 );
 
