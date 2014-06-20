@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.08';
+our $VERSION = '7.09';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -173,16 +173,16 @@ sub _output { my $f = shift; open(my $F, ">$f") or die "output in file $f failed
 # then do "md5sum /tmp/[0-9].xpm"
 my $debug_imgs = 0;
 my %img_md5sum_to_number = (
-    '5b378a02cddac725f8db1104da31a457' => 0,
+    'dbe97681a77bd75f811cd318e1b6def3' => 0,
     '264fc8643f2277ce7df738d8bf0d4533' => 1,
-    'd606ebeeff2ee2532aa7d89f97f203e2' => 2,
+    'bc09366762776a5bca2161105607302b' => 2,
     '71a5e8344d0343928ff077cf292fc7e3' => 3,
     '50a363a8d16f6fbba5e8b14432e2d73e' => 4,
     'd8ce75d8bd5c64a2ed10deede9ad7bc9' => 5,
     '03c32205bcc9fa135b2a3d105dbb2644' => 6,
     'ab159c63f95caa870429812c0cd09ea5' => 7,
     '16454f3fb921be822f379682d0727f3f' => 8,
-    '17273d3d0aacf3b9a7052d4ad3eba74d' => 9,
+    '336809b2bb178abdb8beec26e523af34' => 9,
     '6110983d937627e8b2c131335c9c73e8' => 'blank',
 );
 
@@ -193,8 +193,7 @@ sub _get_number_mangling_map {
     $img_map->BlobToImage($img_map_data);
     $img_map->Threshold(threshold => '90%');
 
-    my $size = 35;
-    my $border = 2;
+    my $size = 64;
 
     my $i = 0;
     my %map;
@@ -205,8 +204,8 @@ sub _get_number_mangling_map {
 	    $newimage->Crop(geometry => 
 			      sprintf("%dx%d+%d+%d",
 				      12, 17,
-				      12+ $x * ($size + 2),
-				      8 + $y * ($size + 2)));
+				      25+ $x * ($size),
+				      21 + $y * ($size)));
 	    $newimage->Set(magick => 'xpm');
 	    my ($img) = $newimage->ImageToBlob;
 	    if ($debug_imgs) {
@@ -224,7 +223,7 @@ sub _get_number_mangling_map {
 
 sub _get_img_map_data {
     my ($self, $response) = @_;
-    my ($url) = $response->content =~ /<img id="clavierImg".*?src="(.*?)"/;
+    my ($url) = $response->content =~ /background:url\((loginform.*?)\)/;
     _GET_content($self, _rel_url($response, $url));
 }
 
