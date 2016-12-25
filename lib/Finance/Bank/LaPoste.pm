@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.10';
+our $VERSION = '7.11';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -162,7 +162,9 @@ sub _rel_url {
 	$base =~ m!([^/]*//[^/]*)! && "$1$rel";
     } else {
 	$base =~ s/\?.*//;
-	"$base/../$rel";
+	my $s = "$base/../$rel";
+	while ($s =~ s![^/]*/\.\./!!) {}
+	$s;
     }
 }
 
