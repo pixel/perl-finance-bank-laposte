@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.09';
+our $VERSION = '7.10';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -261,7 +261,7 @@ sub new {
     exists $self->{password} or croak "Must provide a password";
     exists $self->{username} or croak "Must provide a username";
 
-    $self->{ua} ||= LWP::UserAgent->new;
+    $self->{ua} ||= LWP::UserAgent->new(agent => 'Mozilla');
 
     _login($self);
     $self;
