@@ -352,10 +352,6 @@ sub statements {
 	    goto retry;
 	}
 
-	my ($solde_month, $year) = 
-	  $html =~ /Solde\s+au\s+\d+\s+(\S+)\s+(20\d\d)/ ? ($1, $2) :
-	  $html =~ m!au \d\d/(\d\d)/(20\d\d)!;
-
 	$self->{balance} ||= do {
 	    my ($balance) = $html =~ /(?:Solde|Encours\s+pr&eacute;lev&eacute;)\s+au.*?:\s+(.*?)\beuros/s;
 	    $balance =~ s/<.*?>\s*//g; # (since 24/06/2004) remove: </span><span class="soldeur"> or <strong>...</strong>
@@ -370,12 +366,9 @@ sub statements {
 		$date && $date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
 	    } @$l;
 
-	my $prev_month = $solde_month eq 'janvier' || $solde_month eq '01' ? 1 : 12;
 	[ map {
 	    my ($date, $description, $amount) = @$_;
-	    my ($day, $month) = $date =~ m|(\d+)/(\d+)|;
-	    $year-- if $month > $prev_month;
-	    $prev_month = $month;
+	    my ($day, $month, $year) = $date =~ m|(\d+)/(\d+)/(\d+)|;
 	    Finance::Bank::LaPoste::Statement->new(day => $day, month => $month, year => $year, description => $description, amount => $amount);
 	} @$l ];
     };
