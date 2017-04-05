@@ -1,3 +1,11 @@
+8.00 Wed Apr  5 14:58:44 CEST 2017
+
+     - adapt to new labanquepostale.fr changes
+     - Account "name" is now split into "name" and "owner"
+     - not all accounts are listed by default, so:
+     - use option "cb_accounts" if you want credit card accounts
+     - use option "all_accounts" if you want savings accounts
+
 7.11  Sun Dec 25 20:48:17 CET 2016
 
      - adapt to labanquepostale.fr changes:

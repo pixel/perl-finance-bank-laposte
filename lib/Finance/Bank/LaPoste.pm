@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '7.11';
+our $VERSION = '8.00';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -29,10 +29,11 @@ Finance::Bank::LaPoste -  Check your "La Poste" accounts from Perl
     username => "0120123456L",	# your main account is something like 
 				# 0123456 L 012, stick it together with the region first
     password => "123456",	# a password is usually 6 numbers
+    all_accounts => 1,          # if you want credit card and savings accounts
  );
 
  foreach my $account (@accounts) {
-    print "Name: ", $account->name, " Account_no: ", $account->account_no, "\n", "*" x 80, "\n";
+    print "Name: ", $account->name, " ", $account->owner, " Account_no: ", $account->account_no, "\n", "*" x 80, "\n";
     print $_->as_string, "\n" foreach $account->statements;
  }
 
@@ -108,7 +109,7 @@ my $normalize_number = sub {
 
 =head1 METHODS
 
-=head2 new(username => "0120123456L", password => "123456", feedback => sub { warn "Finance::Bank::LaPoste: $_[0]\n" })
+=head2 new(username => "0120123456L", password => "123456", cb_accounts => 1, all_accounts => 0, feedback => sub { warn "Finance::Bank::LaPoste: $_[0]\n" })
 
 Return an object . You can optionally provide to this method a LWP::UserAgent
 object (argument named "ua"). You can also provide a function used for
@@ -239,6 +240,57 @@ sub _GET_content {
 
 sub _list_accounts {
     my ($self, $response) = @_;
+    my $html = $response->content;
+    my @l = _list_accounts_one_page($self, $html);
+
+    if ($self->{cb_accounts} || $self->{all_accounts}) {
+        if (my ($url) = $html =~ m!<a href="(.*?mouvementsCarteDD.*?)"!) {
+            $url =~ s/&amp;/&/g;
+            push @l, _list_cb_accounts($self, $url);
+        }
+    }
+    if ($self->{all_accounts}) {
+        my $html = _GET_content($self, _rel_url($response, '/voscomptes/canalXHTML/comptesCommun/synthese_ep/afficheSyntheseEP-synthese_ep.ea'));
+        push @l, _list_accounts_one_page($self, $html);
+    }
+    @l;
+}
+
+sub _list_accounts_one_page {
+    my ($self, $html) = @_;
+    my @l;
+
+    my $flag = '';
+    my ($url, $name, $owner, $account_no);
+
+    foreach (split("\n", $html)) {
+        if ($flag eq 'url' && m!<a href="(.*?)"!) {
+            $url = $1;
+        } elsif (m!<h3>(.*?)\s*</h3>(?:<span>(.*)</span>)?!) {
+            $name = $1;
+            $owner = $2;
+        } elsif (m!num(?:&#233;|..?)ro de compte">.*</abbr>(.*?)</!) {
+            $account_no = $1;
+        } elsif (m!<span class="number">(.*) &euro;</span>!) {
+            my $balance = $normalize_number->($1);
+            push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no } if $url;
+        }
+
+        if (/account-resume--banq|account-resume--saving/) {
+            $flag = 'url';
+        } else {
+            $flag = '';
+        }
+    }
+
+    @l;
+}
+
+sub _list_cb_accounts {
+    my ($self, $url) = @_;
+
+    my $response = $self->{ua}->request(HTTP::Request->new(GET => $url));
+    $response->is_success or die "getting $url failed\n" . $response->error_as_HTML;
 
     my $accounts = $parse_table->($response->content);
     map {
@@ -303,6 +355,10 @@ value.
 
 Returns the human-readable name of the account.
 
+=head2 owner()
+
+Return the account owner, if available.
+
 =head2 account_no()
 
 Return the account number, in the form C<0123456L012>.
@@ -330,6 +386,7 @@ sub new {
 
 sub sort_code  { undef }
 sub name       { $_[0]{name} }
+sub owner      { $_[0]{owner} }
 sub account_no { $_[0]{account_no} }
 sub balance    { $_[0]{balance} }
 sub currency   { 'EUR' }
@@ -345,24 +402,15 @@ sub statements {
 
 	my $html = $response->content;
 
-	if ($html =~ /D..?tail de vos cartes/ && !$retry) {
-	    my @l = $html =~ /a href="(.*preparerRecherche-mouvementsCarteDD.ea.*?)"/g;
-	    $self->{url} = _rel_url($response, $l[0]); # taking first (??)
-	    $retry++;
-	    goto retry;
-	}
-
 	$self->{balance} ||= do {
-	    my ($balance) = $html =~ /(?:Solde|Encours\s+pr&eacute;lev&eacute;)\s+au.*?:\s+(.*?)\beuros/s;
-	    $balance =~ s/<.*?>\s*//g; # (since 24/06/2004) remove: </span><span class="soldeur"> or <strong>...</strong>
+	    my ($balance) = $html =~ m!<span class="amount">(.*?) &euro;</span>!;
 	    $normalize_number->($balance);
 	};
-	my $fourth_column_is_Francs = $html =~ m!>Francs.*</th>!;
 	my $l = $parse_table->($html);
 
 	    @$l = map {
-		my ($date, $description, $amount_neg, $amount_pos) = @$_;
-		my $amount = $normalize_number->($amount_neg) + ($fourth_column_is_Francs ? 0 : $normalize_number->($amount_pos));
+		my ($date, $description, $amount1, $amount2) = @$_;
+		my $amount = $normalize_number->($amount2 || $amount1);
 		$date && $date =~ m!(\d+)/(\d+)! ? [ $date, $description, $amount ] : ();
 	    } @$l;
 
