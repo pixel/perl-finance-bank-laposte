@@ -10,7 +10,7 @@ use HTML::Parser;
 use HTML::Form;
 use Digest::MD5();
 
-our $VERSION = '8.00';
+our $VERSION = '8.01';
 
 # $Id: $
 # $Log: LaPoste.pm,v $
@@ -271,9 +271,10 @@ sub _list_accounts_one_page {
             $owner = $2;
         } elsif (m!num(?:&#233;|..?)ro de compte">.*</abbr>(.*?)</!) {
             $account_no = $1;
-        } elsif (m!<span class="number">(.*) &euro;</span>!) {
+        } elsif (m!<span class="number">([\d\s,.+-]*)! && $url) {
             my $balance = $normalize_number->($1);
             push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no } if $url;
+            $url = '';
         }
 
         if (/account-resume--banq|account-resume--saving/) {
