@@ -424,7 +424,7 @@ sub statements {
 	my $html = $response->content;
 
 	$self->{balance} ||= do {
-	    my ($balance) = $html =~ m!<span class="amount">(.*?) &euro;</span>!;
+	    my $balance = ($html =~ m!<span class='negatif'>(.*?)</span>&nbsp;euros! || $html =~ m!<span class="amount">(.*?)&nbsp;&euro;</span>!) && $1;
 	    $normalize_number->($balance);
 	};
 	my $l = $parse_table->($html);
