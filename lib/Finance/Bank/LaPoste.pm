@@ -250,13 +250,13 @@ sub _list_accounts {
 
     if ($self->{all_accounts}) {
         my $html = _GET_content($self, _rel_url($response, '/voscomptes/canalXHTML/comptesCommun/synthese_ep/afficheSyntheseEP-synthese_ep.ea'));
-        push @l, _list_accounts_one_page($self, $html);
+        push @l, _list_accounts_one_page($self, $html, 'savings');
     }
     @l;
 }
 
 sub _list_accounts_one_page {
-    my ($self, $html) = @_;
+    my ($self, $html, $type) = @_;
     my @l;
 
     my $flag = '';
@@ -272,7 +272,7 @@ sub _list_accounts_one_page {
             $account_no = $1;
         } elsif (m!<span class="number">([\d\s,.+-]*)! && $url) {
             my $balance = $normalize_number->($1);
-            push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no } if $url;
+            push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no, type => $type } if $url;
             $url = '';
         } elsif ($flag eq 'balance_cb' && m!<span>([\d\s,.+-]*)!) {
             $balance_cb = $normalize_number->($1);            
