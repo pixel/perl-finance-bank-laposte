@@ -263,7 +263,7 @@ sub _list_accounts_one_page {
     my ($url, $name, $owner, $account_no, $balance_cb);
 
     foreach (split("\n", $html)) {
-        if ($flag eq 'url' && m!<a href="(.*?)"! || m!redirigerVersCU16\('(.*?)'\)!) {
+        if ($flag eq 'url' && m!<a href="(.*?)"! || m!redirigerVersCU16\(event, '(.*?)'\)!) {
             $url = $1;
         } elsif (m!<h3>(.*?)\s*</h3>(?:<span>(.*)</span>)?!) {
             $name = $1;
