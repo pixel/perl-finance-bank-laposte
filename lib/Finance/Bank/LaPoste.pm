@@ -311,27 +311,6 @@ sub _list_accounts_one_page {
     @l;
 }
 
-sub _list_cb_accounts {
-    my ($self, $url) = @_;
-
-    my $response = $self->{ua}->request(HTTP::Request->new(GET => $url));
-    $response->is_success or die "getting $url failed\n" . $response->error_as_HTML;
-
-    my $accounts = $parse_table->($response->content);
-    map {
-	my ($account, $account_no, $balance) = grep { $_ ne '' } @$_;
-	if (ref $account && $account_no) {
-	    my $url = $account->[1];
-	    {
-	        name => $account->[0],
-	        account_no => $account_no, 
-	        balance => $normalize_number->($balance),
-		$url =~ /(releve_ccp|releve_cne|releve_cb|mouvementsCarteDD)\.ea/ ? (url => _rel_url($response, $url)) : (), 
-	    };
-	} else { () }
-    } @$accounts;
-}
-
 sub new {
     my ($class, %opts) = @_;
     my $self = bless \%opts, $class;
