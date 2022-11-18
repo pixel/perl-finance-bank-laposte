@@ -290,7 +290,7 @@ sub _list_accounts_one_page {
             $owner = $2;
         } elsif (m!num(?:&#233;|..?)ro de compte">.*</abbr>(.*?)</!) {
             $account_no = $1;
-        } elsif (m!<div class="amount-euro">([\d\s,.+-]*)! && $url) {
+        } elsif (m!<span class="lib sr-only">Solde </span>([\d\s,.+-]*)! && $url) {
             my $balance = $normalize_number->($1);
             push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no, type => $type } if $url;
             $url = '';
