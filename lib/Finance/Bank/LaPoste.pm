@@ -209,6 +209,15 @@ sub _list_accounts {
     my $html = $response->content;
     my @l = _list_accounts_one_page($self, $html);
 
+    foreach my $account (@l) {
+           if ($account->{type} eq 'cb') {
+               my $html = _GET_content($self, $account->{url});
+               my @urls = $html =~ /<a href="(.*&indexCarte=.*)">/g;
+               if (@urls) {
+                       $account->{url} = _rel_url($response, $urls[-1]); # take last
+               }
+           }
+    }
     if ($self->{all_accounts}) {
         my $html = _GET_content($self, _rel_url($response, '/voscomptes/canalXHTML/comptesCommun/synthese_ep/afficheSyntheseEP-synthese_ep.ea'));
         push @l, _list_accounts_one_page($self, $html, 'savings');
