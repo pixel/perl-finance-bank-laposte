@@ -133,6 +133,7 @@ sub _login {
     my $form = HTML::Form->parse($response->content, $first_url);
     $form->value(username => $self->{username});
     $form->value(password => $password);
+    $form->value(cltName => "1");
 
     push @{$self->{ua}->requests_redirectable}, 'POST';
     $response = $self->{ua}->request($form->click);
@@ -148,7 +149,8 @@ sub _login {
 sub _handle_javascript_redirects {
     my ($self, $response) =@_;
 
-    while ($response->content =~ /top.location.replace\(["'](.*)["']\)/) {	
+    while ($response->content =~ /top.location.replace\(["'](.*)["']\)/ ||
+        $response->content =~ /urlRedirection = "(.*?)"/) {
 	$response = $self->{ua}->request(HTTP::Request->new(GET => _rel_url($response, $1)));
 	$response->is_success or die "login failed\n" . $response->error_as_HTML;
     }
@@ -239,8 +241,9 @@ sub _list_accounts_one_page {
                 $account_info = ''
             } elsif ($flag eq 'account_resume' && m!<span class="lib sr-only">Solde </span>([\d\s,.+-]*)!) {
                 my $balance = $normalize_number->($1);
-                my $name;
-                ($name, $owner, $account_no) = $account_info =~ m!<span class="pseudo-h3" role="presentation">(.*?)</span><span role="presentation">(.*?)\s*</span><span role="presentation">N&deg;&nbsp;(\w+)</span>!;
+                my $name = $account_info =~ s!<span class="pseudo-h3" role="presentation">(.*?)&nbsp;</span>!! && $1;
+                my $account_no = $account_info =~ s!<span role="presentation">N&deg;&nbsp;(\w+)</span>!! && $1;
+                my $owner = $account_info =~ s!<span role="presentation">(.*?)\s*&nbsp;</span>!! && $1 || undef;
                 push @l, { url => $url, balance => $balance, name => $name, owner => $owner, account_no => $account_no, type => $type } if $url;
                 $url = '';
             } elsif ($flag eq 'balance_cb' && m!<span class="amount">([\d\s,.+-]*)!) {
